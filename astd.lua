@@ -2,6 +2,27 @@ if not game:IsLoaded() then game.Loaded:Wait() end
 if game.GameId ~= 4996049426 then return end
 local benchmark_time = os.clock()
 
+-- Safe HTTP loadstring wrapper: guards against dead URLs returning HTML/error pages
+local function safe_http_exec(url)
+    local ok, src = pcall(function() return game:HttpGet(url) end)
+    if not ok or type(src) ~= "string" or src:sub(1,1) == "<" or #src < 10 then
+        warn("[KarmaPanda] HttpGet failed or returned invalid content for: " .. tostring(url))
+        return nil
+    end
+    local fn, err = loadstring(src)
+    if not fn then
+        warn("[KarmaPanda] loadstring failed for: " .. tostring(url) .. " | " .. tostring(err))
+        return nil
+    end
+    local ok2, result = pcall(fn)
+    if not ok2 then
+        warn("[KarmaPanda] Execution error for: " .. tostring(url) .. " | " .. tostring(result))
+        return nil
+    end
+    return result
+end
+
+
 -- Helper Functions
 local function Split(s, delimiter)
     local result = {}
@@ -98,8 +119,12 @@ local Macros = {}
 
 benchmark_time = os.clock()
 
-local Rayfield = loadstring(game:HttpGet(
-                                'https://raw.githubusercontent.com/KarmaPanda/Roblox/refs/heads/main/rayfield.lua'))()
+local Rayfield = safe_http_exec("https://raw.githubusercontent.com/KarmaPanda/Roblox/refs/heads/main/rayfield.lua")
+if not Rayfield then
+    -- Fallback: try the official Rayfield source
+    Rayfield = safe_http_exec("https://sirius.menu/rayfield")
+end
+assert(Rayfield, "[KarmaPanda] Failed to load Rayfield UI library. Check your internet connection.")
 
 local Window = Rayfield:CreateWindow({
     Name = string.format(
@@ -2005,13 +2030,11 @@ function OnGameEnd()
 end
 
 function webhookbanner()
-    loadstring(game:HttpGet(
-                   "https://raw.githubusercontent.com/Jeikaru/Roblox/main/astd-banner.lua"))()
+    safe_http_exec("https://raw.githubusercontent.com/Jeikaru/Roblox/main/astd-banner.lua")
 end
 
 function FpsBoost()
-    loadstring(game:HttpGet(
-                   "https://raw.githubusercontent.com/Jeikaru/Roblox/main/FpsBoost"))()
+    safe_http_exec("https://raw.githubusercontent.com/Jeikaru/Roblox/main/FpsBoost")
 end
 
 local linkport = ""
@@ -2818,8 +2841,7 @@ print("[KarmaPanda] Functions Loaded: " .. os.clock() - benchmark_time)
 benchmark_time = os.clock()
 
 local function CreateHideButtonGUI()
-    loadstring(game:HttpGet(
-                   'https://raw.githubusercontent.com/Jeikaru/Roblox/main/HideGui'))()
+    safe_http_exec("https://raw.githubusercontent.com/Jeikaru/Roblox/main/HideGui")
 end
 
 local function CreateMiniGUI()
@@ -4549,10 +4571,13 @@ if Settings.auto_execute then
     if not _G.auto_executed then
         _G.auto_executed = true
 
-        loadstring(game:HttpGet(
-                       "https://api.irisapp.ca/Scripts/IrisBetterCompat.lua"))()
-        queue_on_teleport(loadstring(game:HttpGet(
-                                         "https://raw.githubusercontent.com/KarmaPanda/Roblox/refs/heads/main/astd.lua"))())
-        print("[KarmaPanda]: Queue on teleport for auto execute sucessful!")
+        safe_http_exec("https://peyton.lol/api/scripts/IrisBetterCompat.lua")
+        local astd_src = game:HttpGet("https://raw.githubusercontent.com/KarmaPanda/Roblox/refs/heads/main/astd.lua")
+        if astd_src and astd_src:sub(1,1) ~= "<" then
+            queue_on_teleport(astd_src)
+            print("[KarmaPanda]: Queue on teleport for auto execute sucessful!")
+        else
+            warn("[KarmaPanda]: Failed to fetch astd.lua for queue_on_teleport.")
+        end
     end
 end
