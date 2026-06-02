@@ -1,5 +1,5 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
-if game.GameId ~= 1720936166 then return end
+if game.GameId ~= 4996049426 then return end
 local benchmark_time = os.clock()
 
 -- Helper Functions
