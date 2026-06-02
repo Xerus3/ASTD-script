@@ -8,7 +8,7 @@ end
 
 -- GameId check with debug output
 local currentGameId = game.GameId
-if currentGameId ~= 4996049426 then
+if currentGameId ~= 1720936166 then
     warn(string.format("[ASTD] Wrong game! Expected 4996049426, got %d. Are you in All Star Tower Defense?", currentGameId))
     return
 end
