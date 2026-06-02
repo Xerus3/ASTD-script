@@ -12,7 +12,7 @@ local function Split(s, delimiter)
 end
 
 local function StringToCFrame(input)
-    return CFrame.new(unpack(game:GetService("HttpService"):JSONDecode("[" ..
+    return CFrame.new(table.unpack(game:GetService("HttpService"):JSONDecode("[" ..
                                                                            input ..
                                                                            "]")))
 end
@@ -766,8 +766,11 @@ end
 
 local function SendWebhook(fields)
     local status, error_message = pcall(function()
-        local request = request or http_request or (http and http.request) or
-                            syn.request
+        local request = (typeof(request) == "function" and request)
+            or (typeof(http_request) == "function" and http_request)
+            or (http and typeof(http.request) == "function" and http.request)
+            or nil
+        if not request then warn("[KarmaPanda] No HTTP request function found (request/http_request).") return end
 
         local content = {}
 
@@ -859,11 +862,11 @@ local function ActionQueueHelper()
             for k, v in pairs(remote_args) do print(k, v) end
             if tostring(remote_method) == "Input" then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack(remote_args))
+                    table.unpack(remote_args))
             end
             if tostring(remote_method) == "Server" then
                 game:GetService("ReplicatedStorage").Remotes.Server:InvokeServer(
-                    unpack(remote_args))
+                    table.unpack(remote_args))
             end
             task.wait(Settings.action_queue_remote_fire_delay)
             if remote_args[1] == "Upgrade" then
@@ -921,7 +924,7 @@ local function SummonUnit(rotation, cframe, unit_name)
                 if CheckUnitExist(unit) then summoned = true end
             end)
 
-        AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input, {
+        AddToQueue("Input", {
             [1] = "Summon",
             [2] = {
                 ["Rotation"] = rotation,
@@ -943,9 +946,7 @@ local function SummonUnit(rotation, cframe, unit_name)
                             end
                         end
                         if not summoned then
-                            AddToQueue(
-                                game:GetService("ReplicatedStorage").Remotes
-                                    .Input, {
+                            AddToQueue("Input", {
                                     [1] = "Summon",
                                     [2] = {
                                         ["Rotation"] = rotation,
@@ -1012,7 +1013,7 @@ local function UpgradeUnit(unit, upgrade_level)
             -- Upgrade_Counter = Upgrade_Counter + 1
             game:GetService("ReplicatedStorage").Remotes.Server:InvokeServer(
                 "Upgrade", unit)
-            -- AddToQueue(game:GetService("ReplicatedStorage").Remotes.Server, {[1] = "Upgrade", [2] = unit})
+            -- AddToQueue("Server", {[1] = "Upgrade", [2] = unit})
         end
 
         task.spawn(function()
@@ -1073,7 +1074,7 @@ local function UseAbilityUnit(unit, ability_string)
                     ability_used = true
                 end)
 
-            AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input, {
+            AddToQueue("Input", {
                 [1] = "UseSpecialMove",
                 [2] = unit,
                 [3] = ability_string
@@ -1088,9 +1089,7 @@ local function UseAbilityUnit(unit, ability_string)
                                 break
                             end
                             if not ability_used then
-                                AddToQueue(
-                                    game:GetService("ReplicatedStorage").Remotes
-                                        .Input, {
+                                AddToQueue("Input", {
                                         [1] = "UseSpecialMove",
                                         [2] = unit,
                                         [3] = ability_string
@@ -1157,18 +1156,18 @@ local function UseMultipleAbilitiesUnit(unit, ability_string, ability_name)
 end
 
 local function ActivateAutoAbilityUnit(unit, ability_string, toggled)
-    AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input,
+    AddToQueue("Input",
                {[1] = "AutoToggle", [2] = unit, [3] = toggled})
     UseAbilityUnit(unit, ability_string)
 end
 
 local function ChangePriorityUnit(unit)
-    AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input,
+    AddToQueue("Input",
                {[1] = "ChangePriority", [2] = unit})
 end
 
 local function SellUnit(unit)
-    AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input,
+    AddToQueue("Input",
                {[1] = "Sell", [2] = unit})
 end
 
@@ -1179,7 +1178,7 @@ local function SkipWave(wave)
 
         -- TODO: Add remote refiring
         while get_wave() == wave and GUI.HUD.NextWaveVote.Visible do
-            AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input,
+            AddToQueue("Input",
                        {[1] = "VoteWaveConfirm"})
             task.wait(1)
         end
@@ -1198,7 +1197,7 @@ local function AutoSkipWaveToggle(wave, status)
                                  :WaitForChild("CategoryName")
 
         if CategoryName.Text ~= status then
-            AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input,
+            AddToQueue("Input",
                        {[1] = "AutoSkipWaves_CHANGE"})
         end
     end)
@@ -1787,7 +1786,7 @@ function AutoVoteExtreme()
     repeat task.wait() until GUI.HUD.ModeVoteFrame.Visible
 
     repeat
-        game:GetService("ReplicatedStorage").Remotes.Input:FireServer(unpack({
+        game:GetService("ReplicatedStorage").Remotes.Input:FireServer(table.unpack({
             [1] = "VoteGameMode",
             [2] = "Extreme"
         }))
@@ -1878,11 +1877,11 @@ function ChangeSpeed(speed)
             local args = {[1] = "SpeedChange", [2] = true}
             if get_game_speed() < tonumber(speed) then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack(args))
+                    table.unpack(args))
             elseif get_game_speed() > tonumber(speed) then
                 args[2] = false
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack(args))
+                    table.unpack(args))
             end
             task.wait(1)
         end
@@ -1898,11 +1897,11 @@ function AutoChangeSpeed()
         if (Settings.auto_3x and get_game_speed() < 3) or
             (Settings.auto_2x and get_game_speed() < 2) then
             game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                unpack(args))
+                table.unpack(args))
         elseif (Settings.auto_2x and get_game_speed() > 2) then
             args[2] = false
             game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                unpack(args))
+                table.unpack(args))
         end
 
         task.wait(1)
@@ -2129,7 +2128,7 @@ function AutoUpgrade()
                     get_max_upgrade_level(unit_name) then
                     local args = {[1] = "Upgrade", [2] = unit}
                     game:GetService("ReplicatedStorage").Remotes.Server:InvokeServer(
-                        unpack(args))
+                        table.unpack(args))
                     any_upgraded = true
                     wait(0.1)
                 end
@@ -2177,7 +2176,7 @@ function AutoSell()
                     local args = {[1] = "Sell", [2] = unit}
 
                     game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                        unpack(args))
+                        table.unpack(args))
                     has_sold = true
                 end
                 attempts = attempts + 1
@@ -2386,7 +2385,7 @@ function AutoEvolveEXP()
         if unit_id ~= nil then
             local args = {[1] = "UpgradeUnit", [2] = unit_name, [3] = unit_id}
             game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                unpack(args))
+                table.unpack(args))
             task.wait(0.25)
         end
 
@@ -2462,7 +2461,7 @@ function AutoTower()
         task.wait(0.5)
         pressKey(Enum.KeyCode.BackSlash)
 
-        game:GetService("ReplicatedStorage").Remotes.Input:FireServer(unpack({
+        game:GetService("ReplicatedStorage").Remotes.Input:FireServer(table.unpack({
             [1] = towerteleporter.Name .. "Start"
         }))
     end
@@ -2485,7 +2484,7 @@ function AutoJoinGame()
         task.wait(1)
         if teleporter ~= nil then
             game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                unpack({[1] = teleporter.Name .. "Start"}))
+                table.unpack({[1] = teleporter.Name .. "Start"}))
         end
     end
 
@@ -2556,7 +2555,7 @@ function AutoJoinGame()
         local function SetStoryMap(teleporter)
             if teleporter ~= nil then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack({
+                    table.unpack({
                         [1] = teleporter.Name .. "Level",
                         [2] = tostring(Settings.auto_join_story_level),
                         [3] = false
@@ -2566,7 +2565,7 @@ function AutoJoinGame()
         local function SetInfiniteMap(teleporter)
             if teleporter ~= nil then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack({
+                    table.unpack({
                         [1] = teleporter.Name .. "Level",
                         [2] = Settings.auto_join_infinite_level,
                         [3] = false
@@ -2633,7 +2632,7 @@ function AutoJoinGame()
         local function SetStoryMap(teleporter)
             if teleporter ~= nil then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack({
+                    table.unpack({
                         [1] = "StoryModeLevel",
                         [2] = tostring(Settings.auto_join_story_level),
                         [3] = true
@@ -2643,7 +2642,7 @@ function AutoJoinGame()
         local function SetInfiniteMap(teleporter)
             if teleporter ~= nil then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack({
+                    table.unpack({
                         [1] = "InfiniteModeLevel",
                         [2] = Settings.auto_join_infinite_level,
                         [3] = false
@@ -2653,7 +2652,7 @@ function AutoJoinGame()
         local function SetAdventureMap(teleporter)
             if teleporter ~= nil then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack({
+                    table.unpack({
                         [1] = "AdventureModeLevel",
                         [2] = Settings.auto_join_adventure_level,
                         [3] = false
