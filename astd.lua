@@ -1,5 +1,19 @@
-if not game:IsLoaded() then game.Loaded:Wait() end
-if game.GameId ~= 4996049426 then return end
+-- Wait for game to load with timeout
+if not game:IsLoaded() then
+    local loaded = false
+    local t = task.delay(10, function() loaded = true end)
+    game.Loaded:Connect(function() loaded = true end)
+    repeat task.wait() until loaded
+end
+
+-- GameId check with debug output
+local currentGameId = game.GameId
+if currentGameId ~= 4996049426 then
+    warn(string.format("[ASTD] Wrong game! Expected 4996049426, got %d. Are you in All Star Tower Defense?", currentGameId))
+    return
+end
+
+print("[ASTD] GameId check passed: " .. tostring(currentGameId))
 local benchmark_time = os.clock()
 
 -- Safe HTTP loadstring wrapper: guards against dead URLs returning HTML/error pages
