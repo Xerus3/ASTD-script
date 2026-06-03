@@ -1,6 +1,41 @@
-if not game:IsLoaded() then game.Loaded:Wait() end
-if game.GameId ~= 1720936166 then return end
+-- Wait for game to load with timeout
+if not game:IsLoaded() then
+    local loaded = false
+    local t = task.delay(10, function() loaded = true end)
+    game.Loaded:Connect(function() loaded = true end)
+    repeat task.wait() until loaded
+end
+
+-- GameId check with debug output
+local currentGameId = game.GameId
+if currentGameId ~= 1720936166 then
+    warn(string.format("[ASTD] Wrong game! Expected 1720936166, got %d. Are you in All Star Tower Defense?", currentGameId))
+    return
+end
+
+print("[ASTD] GameId check passed: " .. tostring(currentGameId))
 local benchmark_time = os.clock()
+
+-- Safe HTTP loadstring wrapper: guards against dead URLs returning HTML/error pages
+local function safe_http_exec(url)
+    local ok, src = pcall(function() return game:HttpGet(url) end)
+    if not ok or type(src) ~= "string" or src:sub(1,1) == "<" or #src < 10 then
+        warn("[KarmaPanda] HttpGet failed or returned invalid content for: " .. tostring(url))
+        return nil
+    end
+    local fn, err = loadstring(src)
+    if not fn then
+        warn("[KarmaPanda] loadstring failed for: " .. tostring(url) .. " | " .. tostring(err))
+        return nil
+    end
+    local ok2, result = pcall(fn)
+    if not ok2 then
+        warn("[KarmaPanda] Execution error for: " .. tostring(url) .. " | " .. tostring(result))
+        return nil
+    end
+    return result
+end
+
 
 -- Helper Functions
 local function Split(s, delimiter)
@@ -12,7 +47,7 @@ local function Split(s, delimiter)
 end
 
 local function StringToCFrame(input)
-    return CFrame.new(unpack(game:GetService("HttpService"):JSONDecode("[" ..
+    return CFrame.new(table.unpack(game:GetService("HttpService"):JSONDecode("[" ..
                                                                            input ..
                                                                            "]")))
 end
@@ -98,8 +133,7 @@ local Macros = {}
 
 benchmark_time = os.clock()
 
-local Rayfield = loadstring(game:HttpGet(
-                                'https://raw.githubusercontent.com/KarmaPanda/Roblox/refs/heads/main/rayfield.lua'))()
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
 local Window = Rayfield:CreateWindow({
     Name = string.format(
@@ -423,7 +457,7 @@ local function get_world()
         ["14657361824"] = -2, -- team event
         ["5552815761"] = -1, -- time chamber
         ["11574204578"] = 0,
-        ["4996049426"] = 1,
+        ["1720936166"] = 1,
         ["7785334488"] = 2
         -- ["11886211138"] = 3
     }
@@ -766,8 +800,11 @@ end
 
 local function SendWebhook(fields)
     local status, error_message = pcall(function()
-        local request = request or http_request or (http and http.request) or
-                            syn.request
+        local request = (typeof(request) == "function" and request)
+            or (typeof(http_request) == "function" and http_request)
+            or (http and typeof(http.request) == "function" and http.request)
+            or nil
+        if not request then warn("[KarmaPanda] No HTTP request function found (request/http_request).") return end
 
         local content = {}
 
@@ -800,7 +837,7 @@ local function SendWebhook(fields)
                             ["icon_url"] = "https://avatars.githubusercontent.com/u/10904093?v=4"
                         },
                         ["title"] = "All Star Tower Defense",
-                        ["url"] = "https://www.roblox.com/games/4996049426/",
+                        ["url"] = "https://www.roblox.com/games/1720936166/",
                         ["type"] = "rich",
                         ["color"] = tonumber(Settings.webhook_color, 16),
                         ["fields"] = content
@@ -859,11 +896,11 @@ local function ActionQueueHelper()
             for k, v in pairs(remote_args) do print(k, v) end
             if tostring(remote_method) == "Input" then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack(remote_args))
+                    table.unpack(remote_args))
             end
             if tostring(remote_method) == "Server" then
                 game:GetService("ReplicatedStorage").Remotes.Server:InvokeServer(
-                    unpack(remote_args))
+                    table.unpack(remote_args))
             end
             task.wait(Settings.action_queue_remote_fire_delay)
             if remote_args[1] == "Upgrade" then
@@ -921,7 +958,7 @@ local function SummonUnit(rotation, cframe, unit_name)
                 if CheckUnitExist(unit) then summoned = true end
             end)
 
-        AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input, {
+        AddToQueue("Input", {
             [1] = "Summon",
             [2] = {
                 ["Rotation"] = rotation,
@@ -943,9 +980,7 @@ local function SummonUnit(rotation, cframe, unit_name)
                             end
                         end
                         if not summoned then
-                            AddToQueue(
-                                game:GetService("ReplicatedStorage").Remotes
-                                    .Input, {
+                            AddToQueue("Input", {
                                     [1] = "Summon",
                                     [2] = {
                                         ["Rotation"] = rotation,
@@ -1012,7 +1047,7 @@ local function UpgradeUnit(unit, upgrade_level)
             -- Upgrade_Counter = Upgrade_Counter + 1
             game:GetService("ReplicatedStorage").Remotes.Server:InvokeServer(
                 "Upgrade", unit)
-            -- AddToQueue(game:GetService("ReplicatedStorage").Remotes.Server, {[1] = "Upgrade", [2] = unit})
+            -- AddToQueue("Server", {[1] = "Upgrade", [2] = unit})
         end
 
         task.spawn(function()
@@ -1073,7 +1108,7 @@ local function UseAbilityUnit(unit, ability_string)
                     ability_used = true
                 end)
 
-            AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input, {
+            AddToQueue("Input", {
                 [1] = "UseSpecialMove",
                 [2] = unit,
                 [3] = ability_string
@@ -1088,9 +1123,7 @@ local function UseAbilityUnit(unit, ability_string)
                                 break
                             end
                             if not ability_used then
-                                AddToQueue(
-                                    game:GetService("ReplicatedStorage").Remotes
-                                        .Input, {
+                                AddToQueue("Input", {
                                         [1] = "UseSpecialMove",
                                         [2] = unit,
                                         [3] = ability_string
@@ -1157,18 +1190,18 @@ local function UseMultipleAbilitiesUnit(unit, ability_string, ability_name)
 end
 
 local function ActivateAutoAbilityUnit(unit, ability_string, toggled)
-    AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input,
+    AddToQueue("Input",
                {[1] = "AutoToggle", [2] = unit, [3] = toggled})
     UseAbilityUnit(unit, ability_string)
 end
 
 local function ChangePriorityUnit(unit)
-    AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input,
+    AddToQueue("Input",
                {[1] = "ChangePriority", [2] = unit})
 end
 
 local function SellUnit(unit)
-    AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input,
+    AddToQueue("Input",
                {[1] = "Sell", [2] = unit})
 end
 
@@ -1179,7 +1212,7 @@ local function SkipWave(wave)
 
         -- TODO: Add remote refiring
         while get_wave() == wave and GUI.HUD.NextWaveVote.Visible do
-            AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input,
+            AddToQueue("Input",
                        {[1] = "VoteWaveConfirm"})
             task.wait(1)
         end
@@ -1198,7 +1231,7 @@ local function AutoSkipWaveToggle(wave, status)
                                  :WaitForChild("CategoryName")
 
         if CategoryName.Text ~= status then
-            AddToQueue(game:GetService("ReplicatedStorage").Remotes.Input,
+            AddToQueue("Input",
                        {[1] = "AutoSkipWaves_CHANGE"})
         end
     end)
@@ -1787,7 +1820,7 @@ function AutoVoteExtreme()
     repeat task.wait() until GUI.HUD.ModeVoteFrame.Visible
 
     repeat
-        game:GetService("ReplicatedStorage").Remotes.Input:FireServer(unpack({
+        game:GetService("ReplicatedStorage").Remotes.Input:FireServer(table.unpack({
             [1] = "VoteGameMode",
             [2] = "Extreme"
         }))
@@ -1878,11 +1911,11 @@ function ChangeSpeed(speed)
             local args = {[1] = "SpeedChange", [2] = true}
             if get_game_speed() < tonumber(speed) then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack(args))
+                    table.unpack(args))
             elseif get_game_speed() > tonumber(speed) then
                 args[2] = false
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack(args))
+                    table.unpack(args))
             end
             task.wait(1)
         end
@@ -1898,11 +1931,11 @@ function AutoChangeSpeed()
         if (Settings.auto_3x and get_game_speed() < 3) or
             (Settings.auto_2x and get_game_speed() < 2) then
             game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                unpack(args))
+                table.unpack(args))
         elseif (Settings.auto_2x and get_game_speed() > 2) then
             args[2] = false
             game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                unpack(args))
+                table.unpack(args))
         end
 
         task.wait(1)
@@ -2006,13 +2039,11 @@ function OnGameEnd()
 end
 
 function webhookbanner()
-    loadstring(game:HttpGet(
-                   "https://raw.githubusercontent.com/Jeikaru/Roblox/main/astd-banner.lua"))()
+    safe_http_exec("https://raw.githubusercontent.com/Jeikaru/Roblox/main/astd-banner.lua")
 end
 
 function FpsBoost()
-    loadstring(game:HttpGet(
-                   "https://raw.githubusercontent.com/Jeikaru/Roblox/main/FpsBoost"))()
+    safe_http_exec("https://raw.githubusercontent.com/Jeikaru/Roblox/main/FpsBoost")
 end
 
 local linkport = ""
@@ -2129,7 +2160,7 @@ function AutoUpgrade()
                     get_max_upgrade_level(unit_name) then
                     local args = {[1] = "Upgrade", [2] = unit}
                     game:GetService("ReplicatedStorage").Remotes.Server:InvokeServer(
-                        unpack(args))
+                        table.unpack(args))
                     any_upgraded = true
                     wait(0.1)
                 end
@@ -2177,7 +2208,7 @@ function AutoSell()
                     local args = {[1] = "Sell", [2] = unit}
 
                     game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                        unpack(args))
+                        table.unpack(args))
                     has_sold = true
                 end
                 attempts = attempts + 1
@@ -2386,7 +2417,7 @@ function AutoEvolveEXP()
         if unit_id ~= nil then
             local args = {[1] = "UpgradeUnit", [2] = unit_name, [3] = unit_id}
             game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                unpack(args))
+                table.unpack(args))
             task.wait(0.25)
         end
 
@@ -2462,7 +2493,7 @@ function AutoTower()
         task.wait(0.5)
         pressKey(Enum.KeyCode.BackSlash)
 
-        game:GetService("ReplicatedStorage").Remotes.Input:FireServer(unpack({
+        game:GetService("ReplicatedStorage").Remotes.Input:FireServer(table.unpack({
             [1] = towerteleporter.Name .. "Start"
         }))
     end
@@ -2485,7 +2516,7 @@ function AutoJoinGame()
         task.wait(1)
         if teleporter ~= nil then
             game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                unpack({[1] = teleporter.Name .. "Start"}))
+                table.unpack({[1] = teleporter.Name .. "Start"}))
         end
     end
 
@@ -2556,7 +2587,7 @@ function AutoJoinGame()
         local function SetStoryMap(teleporter)
             if teleporter ~= nil then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack({
+                    table.unpack({
                         [1] = teleporter.Name .. "Level",
                         [2] = tostring(Settings.auto_join_story_level),
                         [3] = false
@@ -2566,7 +2597,7 @@ function AutoJoinGame()
         local function SetInfiniteMap(teleporter)
             if teleporter ~= nil then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack({
+                    table.unpack({
                         [1] = teleporter.Name .. "Level",
                         [2] = Settings.auto_join_infinite_level,
                         [3] = false
@@ -2633,7 +2664,7 @@ function AutoJoinGame()
         local function SetStoryMap(teleporter)
             if teleporter ~= nil then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack({
+                    table.unpack({
                         [1] = "StoryModeLevel",
                         [2] = tostring(Settings.auto_join_story_level),
                         [3] = true
@@ -2643,7 +2674,7 @@ function AutoJoinGame()
         local function SetInfiniteMap(teleporter)
             if teleporter ~= nil then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack({
+                    table.unpack({
                         [1] = "InfiniteModeLevel",
                         [2] = Settings.auto_join_infinite_level,
                         [3] = false
@@ -2653,7 +2684,7 @@ function AutoJoinGame()
         local function SetAdventureMap(teleporter)
             if teleporter ~= nil then
                 game:GetService("ReplicatedStorage").Remotes.Input:FireServer(
-                    unpack({
+                    table.unpack({
                         [1] = "AdventureModeLevel",
                         [2] = Settings.auto_join_adventure_level,
                         [3] = false
@@ -2819,8 +2850,7 @@ print("[KarmaPanda] Functions Loaded: " .. os.clock() - benchmark_time)
 benchmark_time = os.clock()
 
 local function CreateHideButtonGUI()
-    loadstring(game:HttpGet(
-                   'https://raw.githubusercontent.com/Jeikaru/Roblox/main/HideGui'))()
+    safe_http_exec("https://raw.githubusercontent.com/Jeikaru/Roblox/main/HideGui")
 end
 
 local function CreateMiniGUI()
@@ -4550,10 +4580,13 @@ if Settings.auto_execute then
     if not _G.auto_executed then
         _G.auto_executed = true
 
-        loadstring(game:HttpGet(
-                       "https://api.irisapp.ca/Scripts/IrisBetterCompat.lua"))()
-        queue_on_teleport(loadstring(game:HttpGet(
-                                         "https://raw.githubusercontent.com/KarmaPanda/Roblox/refs/heads/main/astd.lua"))())
-        print("[KarmaPanda]: Queue on teleport for auto execute sucessful!")
+        safe_http_exec("https://peyton.lol/api/scripts/IrisBetterCompat.lua")
+        local astd_src = game:HttpGet("https://raw.githubusercontent.com/Xerus3/ASTD-script/refs/heads/main/astd.lua")
+        if astd_src and astd_src:sub(1,1) ~= "<" then
+            queue_on_teleport(astd_src)
+            print("[KarmaPanda]: Queue on teleport for auto execute sucessful!")
+        else
+            warn("[KarmaPanda]: Failed to fetch astd.lua for queue_on_teleport.")
+        end
     end
 end
