@@ -133,7 +133,7 @@ local Macros = {}
 
 benchmark_time = os.clock()
 
-local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/Xerus3/ASTD-script/refs/heads/main/rayfield.lua"))()
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/Xerus3/ASTD-script/refs/heads/patch-1/rayfield.lua"))()
 
 local Window = Rayfield:CreateWindow({
     Name = string.format(
@@ -4581,7 +4581,7 @@ if Settings.auto_execute then
         _G.auto_executed = true
 
         safe_http_exec("https://peyton.lol/api/scripts/IrisBetterCompat.lua")
-        local astd_src = game:HttpGet("https://raw.githubusercontent.com/Xerus3/ASTD-script/refs/heads/main/astd.lua")
+        local astd_src = game:HttpGet("https://raw.githubusercontent.com/Xerus3/ASTD-script/refs/heads/patch-1/astd.lua")
         if astd_src and astd_src:sub(1,1) ~= "<" then
             queue_on_teleport(astd_src)
             print("[KarmaPanda]: Queue on teleport for auto execute sucessful!")
