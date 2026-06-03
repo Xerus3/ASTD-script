@@ -2005,13 +2005,17 @@ function OnGameEnd()
 end
 
 function webhookbanner()
-    loadstring(game:HttpGet(
-                   "https://raw.githubusercontent.com/Jeikaru/Roblox/main/astd-banner.lua"))()
+    pcall(function()
+        local src = game:HttpGet("https://raw.githubusercontent.com/Jeikaru/Roblox/main/astd-banner.lua")
+        if src and src:sub(1,1) ~= "<" then loadstring(src)() end
+    end)
 end
 
 function FpsBoost()
-    loadstring(game:HttpGet(
-                   "https://raw.githubusercontent.com/Jeikaru/Roblox/main/FpsBoost"))()
+    pcall(function()
+        local src = game:HttpGet("https://raw.githubusercontent.com/Jeikaru/Roblox/main/FpsBoost")
+        if src and src:sub(1,1) ~= "<" then loadstring(src)() end
+    end)
 end
 
 local linkport = ""
@@ -2818,8 +2822,10 @@ print("[KarmaPanda] Functions Loaded: " .. os.clock() - benchmark_time)
 benchmark_time = os.clock()
 
 local function CreateHideButtonGUI()
-    loadstring(game:HttpGet(
-                   'https://raw.githubusercontent.com/Jeikaru/Roblox/main/HideGui'))()
+    pcall(function()
+        local src = game:HttpGet("https://raw.githubusercontent.com/Jeikaru/Roblox/main/HideGui")
+        if src and src:sub(1,1) ~= "<" then loadstring(src)() end
+    end)
 end
 
 local function CreateMiniGUI()
@@ -4549,8 +4555,7 @@ if Settings.auto_execute then
     if not _G.auto_executed then
         _G.auto_executed = true
 
-        loadstring(game:HttpGet(
-                       "https://peyton.lol/api/scripts/IrisBetterCompat.lua"))()
+
         local _qot_src = game:HttpGet("https://raw.githubusercontent.com/Xerus3/ASTD-script/refs/heads/main/astd.lua")
         if _qot_src and _qot_src:sub(1,1) ~= "<" then queue_on_teleport(_qot_src) end
         print("[KarmaPanda]: Queue on teleport for auto execute sucessful!")
