@@ -1003,32 +1003,6 @@ function f:CreateWindow(bo)
             bq.UIStroke.Transparency = 1
         end
     end
-    if bo.Discord then
-        if not isfolder(c .. "/Discord Invites") then
-            makefolder(c .. "/Discord Invites")
-        end
-        if not isfile(c .. "/Discord Invites" .. "/" .. bo.Discord.Invite .. e) then
-            if y then
-                y(
-                    {
-                        Url = "http://127.0.0.1:6463/rpc?v=1",
-                        Method = "POST",
-                        Headers = {["Content-Type"] = "application/json", Origin = "https://discord.com"},
-                        Body = i:JSONEncode(
-                            {cmd = "INVITE_BROWSER", nonce = i:GenerateGUID(false), args = {code = bo.Discord.Invite}}
-                        )
-                    }
-                )
-            end
-            if bo.Discord.RememberJoins then
-                writefile(
-                    c .. "/Discord Invites" .. "/" .. bo.Discord.Invite .. e,
-                    "Rayfield RememberJoins is true for this invite, this invite will not ask you to join again"
-                )
-            end
-        else
-        end
-    end
     G.Template.Visible = false
     G.Visible = true
     m.Enabled = true
