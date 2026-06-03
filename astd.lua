@@ -99,10 +99,15 @@ local Macros = {}
 benchmark_time = os.clock()
 
 -- Rayfield loader (Xeno compatible)
-if not isfile("rayfield_cache.lua") then
-    writefile("rayfield_cache.lua", game:HttpGet("https://raw.githubusercontent.com/Xerus3/ASTD-script/refs/heads/main/rayfield.lua"))
+if isfile("rayfield_cache.lua") then delfile("rayfield_cache.lua") end
+local ok, rf_src = pcall(game.HttpGet, game, "https://raw.githubusercontent.com/Xerus3/ASTD-script/refs/heads/main/rayfield.lua")
+if not ok or not rf_src or rf_src:sub(1,1) == "<" then
+    error("[ASTD] Failed to fetch Rayfield: " .. tostring(rf_src))
 end
-local Rayfield = loadstring(readfile("rayfield_cache.lua"))()
+writefile("rayfield_cache.lua", rf_src)
+local _rf_fn, _rf_err = loadstring(rf_src)
+if not _rf_fn then error("[ASTD] Rayfield parse error: " .. tostring(_rf_err)) end
+local Rayfield = _rf_fn()
 
 local Window = Rayfield:CreateWindow({
     Name = string.format(
@@ -2821,12 +2826,7 @@ end)
 print("[KarmaPanda] Functions Loaded: " .. os.clock() - benchmark_time)
 benchmark_time = os.clock()
 
-local function CreateHideButtonGUI()
-    pcall(function()
-        local src = game:HttpGet("https://raw.githubusercontent.com/Jeikaru/Roblox/main/HideGui")
-        if src and src:sub(1,1) ~= "<" then loadstring(src)() end
-    end)
-end
+local function CreateHideButtonGUI() end
 
 local function CreateMiniGUI()
     local ScreenGui = Instance.new("ScreenGui")
