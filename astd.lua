@@ -98,25 +98,17 @@ local Macros = {}
 
 benchmark_time = os.clock()
 
--- Rayfield loader (Xeno compatible)
-if isfile("rayfield_cache.lua") then delfile("rayfield_cache.lua") end
-local ok, rf_src = pcall(game.HttpGet, game, "https://raw.githubusercontent.com/Xerus3/ASTD-script/refs/heads/main/rayfield.lua")
-if not ok or not rf_src or rf_src:sub(1,1) == "<" then
-    error("[ASTD] Failed to fetch Rayfield: " .. tostring(rf_src))
-end
-writefile("rayfield_cache.lua", rf_src)
-local _rf_fn, _rf_err = loadstring(rf_src)
-if not _rf_fn then error("[ASTD] Rayfield parse error: " .. tostring(_rf_err)) end
-local Rayfield = _rf_fn()
+-- Rayfield loader
+getgenv().SecureMode = true
+local Rayfield = loadstring(readfile("rayfield_cache.lua") or game:HttpGet("https://raw.githubusercontent.com/Xerus3/ASTD-script/refs/heads/main/rayfield.lua"))()
 
 local Window = Rayfield:CreateWindow({
-    Name = string.format(
-        "KarmaPanda's All Star Tower Defense Script (Version %s)", version),
+    Name = string.format("KarmaPanda's All Star Tower Defense Script (Version %s)", version),
     LoadingTitle = "All Star Tower Defense Script",
     LoadingSubtitle = "by KarmaPanda",
     LoadingVersion = string.format("Version %s", version),
     ConfigurationSaving = {Enabled = false},
-    Discord = {Enabled = true, Invite = "BrnQQGKbvE", RememberJoins = true},
+    Discord = {Enabled = false},
     KeySystem = false
 })
 
@@ -2011,15 +2003,13 @@ end
 
 function webhookbanner()
     pcall(function()
-        local src = game:HttpGet("https://raw.githubusercontent.com/Jeikaru/Roblox/main/astd-banner.lua")
-        if src and src:sub(1,1) ~= "<" then loadstring(src)() end
+        -- astd-banner.lua (dead URL, removed)
     end)
 end
 
 function FpsBoost()
     pcall(function()
-        local src = game:HttpGet("https://raw.githubusercontent.com/Jeikaru/Roblox/main/FpsBoost")
-        if src and src:sub(1,1) ~= "<" then loadstring(src)() end
+        -- FpsBoost (dead URL, removed)
     end)
 end
 
